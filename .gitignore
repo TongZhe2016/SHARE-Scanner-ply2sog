@@ -1,0 +1,20 @@
+# Keep existing captures, training output and generated binaries local.
+/*
+!/.gitignore
+!/.gitmodules
+!/README.md
+!/package.json
+!/package-lock.json
+!/scripts/
+!/tests/
+!/docs/
+!/reports/
+!/vendor/
+!/sog/
+/vendor/*
+!/vendor/playcanvas-engine
+/sog/*
+!/sog/.gitkeep
+node_modules/
+__pycache__/
+*.log
