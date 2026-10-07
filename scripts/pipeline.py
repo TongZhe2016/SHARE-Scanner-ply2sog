@@ -185,7 +185,7 @@ def main():
         write_json(ROOT/'reports/inventory.json', inventory)
         print(json.dumps(inventory, ensure_ascii=False, indent=2)); return
     if not items: p.error('No Gaussian scenes found')
-    version = subprocess.check_output([str(NODE), str(CLI), '--version'], text=True).strip()
+    version = subprocess.check_output([str(NODE), str(CLI), '--version'], text=True, stderr=subprocess.STDOUT).strip()
     commit = subprocess.check_output(['git', '-C', str(ROOT/'vendor/splat-transform'), 'rev-parse', 'HEAD'], text=True).strip()
     if '3.10.0' not in version or commit[:7] not in version:
         raise ValueError('Encoder package and submodule revision differ')

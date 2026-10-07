@@ -85,5 +85,12 @@
     "output/高手 3GS/3DGS/mesh/高手 3GS_fuse.ply",
     "output/高手 3GS/3DGS/mesh/高手 3GS_fuse_post.ply",
     "output/高手 3GS/3DGS/mesh/高手 3GS_fuse_simplified.ply"
+  ],
+  "scannedAt": "2026-10-07T21:15:44.143862+08:00",
+  "captureDirectoriesWithoutGaussianPly": [
+    "功夫 电线杆",
+    "街景02_3DGS",
+    "街景3 3DGS",
+    "高手 点云2"
   ]
 }
