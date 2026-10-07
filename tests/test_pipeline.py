@@ -20,8 +20,20 @@ def make_ply(path, count=1024):
 
 
 class PipelineTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.original_root = pipeline.DATA_ROOT
+        cls.workspace = tempfile.TemporaryDirectory()
+        pipeline.DATA_ROOT = Path(cls.workspace.name)
+        (pipeline.DATA_ROOT/'sog').mkdir()
+
+    @classmethod
+    def tearDownClass(cls):
+        pipeline.DATA_ROOT = cls.original_root
+        cls.workspace.cleanup()
+
     def test_inventory_latest_all_epochs_and_mesh_exclusion(self):
-        with tempfile.TemporaryDirectory(dir=pipeline.ROOT/'sog') as tmp:
+        with tempfile.TemporaryDirectory(dir=pipeline.DATA_ROOT/'sog') as tmp:
             base = Path(tmp)
             scene = base/'带 空格 场景'/'ply'; scene.mkdir(parents=True)
             make_ply(scene/'场景_epoch_9.ply')
@@ -48,15 +60,15 @@ class PipelineTests(unittest.TestCase):
             with self.assertRaises(ValueError): pipeline.validate_source(p)
 
     def test_roundtrip_resume_and_tampering(self):
-        with tempfile.TemporaryDirectory(dir=pipeline.ROOT/'sog', prefix='.test-') as tmp:
+        with tempfile.TemporaryDirectory(dir=pipeline.DATA_ROOT/'sog', prefix='.test-') as tmp:
             tmp = Path(tmp); p = tmp/'fixture.ply'; make_ply(p)
-            item = {'path': str(p.relative_to(pipeline.ROOT)), 'gaussians': 1024}
+            item = {'path': str(p.relative_to(pipeline.DATA_ROOT)), 'gaussians': 1024}
             before = pipeline.sha256(p)
             result = pipeline.convert_one(item, gpu='cpu', target_dir=tmp/'out')
             self.assertEqual(result['validation']['verifiedGaussians'], 1024)
             self.assertEqual(before, pipeline.sha256(p))
             self.assertEqual(result, pipeline.convert_one(item, gpu='cpu', target_dir=tmp/'out'))
-            target = pipeline.ROOT/result['output']
+            target = pipeline.DATA_ROOT/result['output']
             with self.assertRaises(ValueError): pipeline.verify_sog(target, 1025)
             with target.open('ab') as f: f.write(b'changed')
             with self.assertRaises(ValueError): pipeline.convert_one(item, gpu='cpu', target_dir=tmp/'out')

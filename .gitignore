@@ -1,20 +1,10 @@
-# Keep existing captures, training output and generated binaries local.
-/*
-!/.gitignore
-!/.gitmodules
-!/README.md
-!/package.json
-!/package-lock.json
-!/scripts/
-!/tests/
-!/docs/
-!/reports/
-!/vendor/
-!/sog/
-/vendor/*
-!/vendor/splat-transform
-/sog/*
-!/sog/.gitkeep
 node_modules/
+.venv/
 __pycache__/
+*.pyc
 *.log
+*.tmp
+# Scene assets live outside this repository. Protect against accidental copies.
+*.ply
+*.sog
+.DS_Store

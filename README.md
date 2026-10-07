@@ -4,11 +4,23 @@
 
 ## 目录
 
-- 原有照片、视频、扫描工程文件夹以及 `output/`：原地保留，不加入 Git。
+代码仓库独立位于 `/mnt/data1/上海/ply2sog/`；资产根目录为其父目录 `/mnt/data1/上海/`。
+
+```text
+上海/
+├── ply2sog/             # Git 仓库：代码、子模块、依赖、文档、报告
+├── output/              # 原有训练结果，包括输入 PLY
+├── sog/                 # 新导出的完整场景 SOG 与运行日志
+└── 各扫描工程及照片视频    # 原样保留
+```
+
+以下未加 `../` 的代码路径均相对于 `ply2sog/`：
+
+- 原有照片、视频、扫描工程文件夹以及 `../output/`：原地保留，不加入 Git。
 - `vendor/splat-transform/`：唯一 Git 子模块，官方 SplatTransform 源码。
 - `scripts/`：场景发现、批量编码、验证。
 - `tests/`：端到端测试和损坏输入测试。
-- `sog/`：完整场景 `.sog`、同名 `.json` 校验记录、`.log` 编码日志；大文件不入 Git。
+- `../sog/`：完整场景 `.sog`、同名 `.json` 校验记录、`.log` 编码日志；大文件不入 Git。
 - `reports/`：纳入版本管理的源场景清单和逐场景校验记录。
 - `docs/`：算法、完整性及验证说明。
 
@@ -17,6 +29,7 @@
 需要 Linux、Git、npm 和 Python 3。项目锁定 Node 22.22.0；不修改系统 Node。首次 `npm ci` 若系统 Node 较旧，可能显示 engine 警告，实际执行使用项目内 Node 22。
 
 ```bash
+cd /mnt/data1/上海/ply2sog
 git submodule update --init --recursive
 npm ci
 python3 -m venv .venv
@@ -49,7 +62,15 @@ node_modules/node/bin/node node_modules/@playcanvas/splat-transform/bin/cli.mjs 
 
 ## 输出与续跑
 
-每个输入 `output/<场景>/3DGS/ply/<名称>.ply` 输出 `sog/<名称>.sog`。同名 JSON 记录 SHA-256、字节数、高斯数、耗时和解码统计。
+默认使用代码仓库的父目录作为资产根目录。仓库放在其他位置时，设置环境变量即可，无需搬动素材：
+
+```bash
+PLY2SOG_DATA_ROOT='/实际的资产目录' npm run convert
+```
+
+`reports/` 内记录的 `source`、`output` 路径均相对于资产根目录。
+
+每个输入 `../output/<场景>/3DGS/ply/<名称>.ply` 输出 `../sog/<名称>.sog`。同名 JSON 记录 SHA-256、字节数、高斯数、耗时和解码统计。
 
 再次运行会检查已有文件的源/目标哈希，并重新完整解码后跳过编码。没有配套记录的旧输出或哈希不符的文件不会被覆盖。转换先写临时目录，校验成功后才发布最终文件；进程异常退出不会把不完整文件当成成功结果。多实例使用文件锁互斥。发生强制断电时，隐藏的 `.encoding-*` 目录可能残留，可人工检查后清理。
 
@@ -59,10 +80,9 @@ node_modules/node/bin/node node_modules/@playcanvas/splat-transform/bin/cli.mjs 
 
 代码、依赖锁文件、子模块指针和校验报告按阶段提交；原始素材与 SOG 大文件留在本机，**Git Push 不会备份这些大文件**。使用方应另行备份素材和 `sog/`。
 
-尚未提供本项目远程地址。设置后即可推送完整提交历史：
+本项目远程仓库为 [TongZhe2016/SHARE-Scanner-ply2sog](https://github.com/TongZhe2016/SHARE-Scanner-ply2sog)。本机使用已认证的 SSH 连接推送：
 
 ```bash
-git remote add origin <你的仓库地址>
 git push -u origin main
 ```
 

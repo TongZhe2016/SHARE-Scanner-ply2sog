@@ -13,9 +13,10 @@ import tempfile
 import time
 import zipfile
 
-ROOT = Path(__file__).resolve().parents[1]
-NODE = ROOT / 'node_modules/node/bin/node'
-CLI = ROOT / 'node_modules/@playcanvas/splat-transform/bin/cli.mjs'
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+DATA_ROOT = Path(os.environ.get('PLY2SOG_DATA_ROOT', PROJECT_ROOT.parent)).resolve()
+NODE = PROJECT_ROOT / 'node_modules/node/bin/node'
+CLI = PROJECT_ROOT / 'node_modules/@playcanvas/splat-transform/bin/cli.mjs'
 REQUIRED = ['x', 'y', 'z', 'f_dc_0', 'f_dc_1', 'f_dc_2', 'opacity',
             'scale_0', 'scale_1', 'scale_2', 'rot_0', 'rot_1', 'rot_2', 'rot_3']
 
@@ -54,18 +55,18 @@ def header(path):
         raise ValueError(f'Unterminated PLY header: {path}')
 
 
-def discover(base=ROOT / 'output', all_epochs=False):
+def discover(base=DATA_ROOT / 'output', all_epochs=False):
     groups, skipped = {}, []
     for path in sorted(base.rglob('*')):
         if path.suffix.lower() != '.ply' or path.name.startswith('._'): continue
         h = header(path)
         names = [p[-1] for p in h['properties']]
         if not set(REQUIRED).issubset(names):
-            skipped.append(str(path.relative_to(ROOT))); continue
+            skipped.append(str(path.relative_to(DATA_ROOT))); continue
         match = re.search(r'_epoch_(\d+)$', path.stem)
         epoch = int(match[1]) if match else 0
         scene = str(path.parent.relative_to(base))
-        groups.setdefault(scene, []).append(dict(path=str(path.relative_to(ROOT)), epoch=epoch,
+        groups.setdefault(scene, []).append(dict(path=str(path.relative_to(DATA_ROOT)), epoch=epoch,
             gaussians=h['count'], bytes=path.stat().st_size))
     selected = []
     for items in groups.values():
@@ -76,7 +77,7 @@ def discover(base=ROOT / 'output', all_epochs=False):
     return dict(policy='all-epochs' if all_epochs else 'highest-epoch-per-directory',
                 scenes=selected, candidates=sum(map(len, groups.values())), skippedMeshPly=skipped,
                 scannedAt=datetime.now(timezone(timedelta(hours=8))).isoformat(),
-                captureDirectoriesWithoutGaussianPly=[p.name for p in sorted(ROOT.iterdir())
+                captureDirectoriesWithoutGaussianPly=[p.name for p in sorted(DATA_ROOT.iterdir())
                     if p.is_dir() and any(p.glob('*.bag'))
                     and not any(Path(i['path']).parts[1] == p.name for i in selected)])
 
@@ -125,14 +126,14 @@ def verify_sog(path, count):
                     modes = np.frombuffer(pixels, dtype=np.uint8).reshape(-1, 4)[:count, 3]
                     if (modes < 252).any(): raise ValueError('Invalid quaternion encoding')
         if len(set(sizes)) != 1: raise ValueError('Inconsistent texture dimensions')
-        run = subprocess.run([str(NODE), str(ROOT/'scripts/verify-sog.mjs'), str(path), str(count)], check=True, capture_output=True, text=True)
+        run = subprocess.run([str(NODE), str(PROJECT_ROOT/'scripts/verify-sog.mjs'), str(path), str(count)], check=True, capture_output=True, text=True)
         result = json.loads(run.stdout)
         result.update(textureSize=list(sizes[0]), archiveCRC='passed', webpDecode='passed')
         return result
 
 
-def convert_one(item, gpu='0', target_dir=ROOT/'sog'):
-    source = ROOT / item['path']
+def convert_one(item, gpu='0', target_dir=DATA_ROOT/'sog'):
+    source = DATA_ROOT / item['path']
     target = target_dir / (source.stem + '.sog')
     record = target.with_suffix('.json')
     target_dir.mkdir(parents=True, exist_ok=True)
@@ -154,15 +155,15 @@ def convert_one(item, gpu='0', target_dir=ROOT/'sog'):
         log = target.with_suffix('.log')
         print(f'ENCODING {source.name} ({h["count"]:,} Gaussians)', flush=True)
         with log.open('w') as out:
-            subprocess.run(command, stdout=out, stderr=subprocess.STDOUT, check=True, cwd=ROOT)
+            subprocess.run(command, stdout=out, stderr=subprocess.STDOUT, check=True, cwd=PROJECT_ROOT)
         validation = verify_sog(partial, h['count'])
         if sha256(source) != source_hash: raise ValueError('Source changed during encoding')
         result = dict(source=item['path'], sourceBytes=source.stat().st_size, sourceSha256=source_hash,
-            output=str(target.relative_to(ROOT)), outputBytes=partial.stat().st_size, outputSha256=sha256(partial),
+            output=str(target.relative_to(DATA_ROOT)), outputBytes=partial.stat().st_size, outputSha256=sha256(partial),
             gaussians=h['count'], ratio=source.stat().st_size/partial.stat().st_size,
             seconds=round(time.monotonic()-started, 2), validation=validation,
             encoder='@playcanvas/splat-transform@3.10.0', gpu=gpu,
-            splatTransformCommit=subprocess.check_output(['git','-C',str(ROOT/'vendor/splat-transform'),'rev-parse','HEAD'], text=True).strip())
+            splatTransformCommit=subprocess.check_output(['git','-C',str(PROJECT_ROOT/'vendor/splat-transform'),'rev-parse','HEAD'], text=True).strip())
         os.replace(partial, target)
         write_json(record, result)
         print(f'COMPLETE {target.name}: {result["ratio"]:.2f}x, {result["outputBytes"]:,} bytes', flush=True)
@@ -182,28 +183,29 @@ def main():
         items = [i for i in items if Path(i['path']).stem in args.scene]
         if len(items) != len(set(args.scene)): p.error('Scene not found; see inventory')
     if args.action == 'inventory':
-        write_json(ROOT/'reports/inventory.json', inventory)
+        write_json(PROJECT_ROOT/'reports/inventory.json', inventory)
         print(json.dumps(inventory, ensure_ascii=False, indent=2)); return
     if not items: p.error('No Gaussian scenes found')
     version = subprocess.check_output([str(NODE), str(CLI), '--version'], text=True, stderr=subprocess.STDOUT).strip()
-    commit = subprocess.check_output(['git', '-C', str(ROOT/'vendor/splat-transform'), 'rev-parse', 'HEAD'], text=True).strip()
+    commit = subprocess.check_output(['git', '-C', str(PROJECT_ROOT/'vendor/splat-transform'), 'rev-parse', 'HEAD'], text=True).strip()
     if '3.10.0' not in version or commit[:7] not in version:
         raise ValueError('Encoder package and submodule revision differ')
+    (DATA_ROOT/'sog').mkdir(parents=True, exist_ok=True)
     # Prevent concurrent writers using the same output directory.
     import fcntl
-    with (ROOT/'sog/.pipeline.lock').open('w') as lock:
+    with (DATA_ROOT/'sog/.pipeline.lock').open('w') as lock:
         fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
         for item in items:
             if args.action == 'convert':
                 result = convert_one(item, args.gpu)
             else:
-                target = ROOT/'sog'/ (Path(item['path']).stem + '.sog')
+                target = DATA_ROOT/'sog'/ (Path(item['path']).stem + '.sog')
                 result = json.loads(target.with_suffix('.json').read_text())
-                if result['sourceSha256'] != sha256(ROOT/item['path']) or result['outputSha256'] != sha256(target):
+                if result['sourceSha256'] != sha256(DATA_ROOT/item['path']) or result['outputSha256'] != sha256(target):
                     raise ValueError(f'Hash mismatch: {target}')
                 verify_sog(target, item['gaussians'])
                 print(f'VERIFIED {target.name}', flush=True)
-            write_json(ROOT/'reports'/ (Path(item['path']).stem + '.json'), result)
+            write_json(PROJECT_ROOT/'reports'/ (Path(item['path']).stem + '.json'), result)
 
 
 if __name__ == '__main__': main()
