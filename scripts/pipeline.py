@@ -96,7 +96,7 @@ def validate_source(path):
 def verify_sog(path, count):
     from PIL import Image
     import numpy as np
-    with zipfile.ZipFile(path) as z, tempfile.TemporaryDirectory(prefix='sog-verify-') as tmp:
+    with zipfile.ZipFile(path) as z:
         if z.testzip() is not None: raise ValueError('SOG archive CRC failure')
         meta = json.loads(z.read('meta.json'))
         if meta.get('version') != 2 or meta.get('count') != count: raise ValueError('SOG version/count mismatch')
@@ -116,10 +116,8 @@ def verify_sog(path, count):
                 if name == 'quats':
                     modes = np.frombuffer(pixels, dtype=np.uint8).reshape(-1, 4)[:count, 3]
                     if (modes < 252).any(): raise ValueError('Invalid quaternion encoding')
-                (Path(tmp) / f'{name}.rgba').write_bytes(pixels)
         if len(set(sizes)) != 1: raise ValueError('Inconsistent texture dimensions')
-        write_json(Path(tmp) / 'meta.json', meta)
-        run = subprocess.run([str(NODE), str(ROOT/'scripts/verify-engine.mjs'), tmp], check=True, capture_output=True, text=True)
+        run = subprocess.run([str(NODE), str(ROOT/'scripts/verify-sog.mjs'), str(path), str(count)], check=True, capture_output=True, text=True)
         result = json.loads(run.stdout)
         result.update(textureSize=list(sizes[0]), archiveCRC='passed', webpDecode='passed')
         return result
@@ -156,7 +154,7 @@ def convert_one(item, gpu='0', target_dir=ROOT/'sog'):
             gaussians=h['count'], ratio=source.stat().st_size/partial.stat().st_size,
             seconds=round(time.monotonic()-started, 2), validation=validation,
             encoder='@playcanvas/splat-transform@3.10.0', gpu=gpu,
-            engineCommit=subprocess.check_output(['git','-C',str(ROOT/'vendor/playcanvas-engine'),'rev-parse','HEAD'], text=True).strip())
+            splatTransformCommit=subprocess.check_output(['git','-C',str(ROOT/'vendor/splat-transform'),'rev-parse','HEAD'], text=True).strip())
         os.replace(partial, target)
         write_json(record, result)
         print(f'COMPLETE {target.name}: {result["ratio"]:.2f}x, {result["outputBytes"]:,} bytes', flush=True)

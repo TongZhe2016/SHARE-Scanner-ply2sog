@@ -12,7 +12,7 @@
 !/vendor/
 !/sog/
 /vendor/*
-!/vendor/playcanvas-engine
+!/vendor/splat-transform
 /sog/*
 !/sog/.gitkeep
 node_modules/
