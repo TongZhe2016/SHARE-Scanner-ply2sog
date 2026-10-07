@@ -1,0 +1,15 @@
+{
+  "name": "shanghai-ply-to-sog",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Reproducible PlayCanvas PLY to SOG scene compression",
+  "scripts": {
+    "inventory": "python3 scripts/pipeline.py inventory",
+    "convert": "python3 scripts/pipeline.py convert",
+    "verify": "python3 scripts/pipeline.py verify",
+    "test": "python3 -m unittest discover -s tests -v"
+  },
+  "dependencies": {"@playcanvas/splat-transform": "3.10.0"},
+  "devDependencies": {"node": "22.22.0"}
+}

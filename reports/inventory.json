@@ -1,0 +1,80 @@
+{
+  "policy": "highest-epoch-per-directory",
+  "scenes": [
+    {
+      "path": "output/桥 高斯/3DGS/ply/桥 高斯_epoch_30.ply",
+      "epoch": 30,
+      "gaussians": 20585095,
+      "bytes": 1152765744
+    },
+    {
+      "path": "output/楼群3DGS/3DGS/ply/楼群3DGS_epoch_30.ply",
+      "epoch": 30,
+      "gaussians": 6807223,
+      "bytes": 381204911
+    },
+    {
+      "path": "output/真拍 楼群 高斯/3DGS/ply/真拍 楼群 高斯_epoch_30.ply",
+      "epoch": 30,
+      "gaussians": 28445711,
+      "bytes": 1592960240
+    },
+    {
+      "path": "output/街景1_3DGS/3DGS/ply/街景1_3DGS_epoch_30.ply",
+      "epoch": 30,
+      "gaussians": 19128595,
+      "bytes": 1071201744
+    },
+    {
+      "path": "output/车3DGS/3DGS/ply/车3DGS_epoch_30.ply",
+      "epoch": 30,
+      "gaussians": 14182820,
+      "bytes": 794238344
+    },
+    {
+      "path": "output/高手/3DGS/ply/高手_epoch_30.ply",
+      "epoch": 30,
+      "gaussians": 15397269,
+      "bytes": 598736896
+    },
+    {
+      "path": "output/高手 2 GS/3DGS/ply/高手 2 GS_epoch_30.ply",
+      "epoch": 30,
+      "gaussians": 18512569,
+      "bytes": 1036704288
+    },
+    {
+      "path": "output/高手 3GS/3DGS/ply/高手 3GS_epoch_30.ply",
+      "epoch": 30,
+      "gaussians": 24416486,
+      "bytes": 1367323640
+    }
+  ],
+  "candidates": 40,
+  "skippedMeshPly": [
+    "output/桥 高斯/3DGS/mesh/桥 高斯_fuse.ply",
+    "output/桥 高斯/3DGS/mesh/桥 高斯_fuse_post.ply",
+    "output/桥 高斯/3DGS/mesh/桥 高斯_fuse_simplified.ply",
+    "output/楼群3DGS/3DGS/mesh/楼群3DGS_fuse.ply",
+    "output/楼群3DGS/3DGS/mesh/楼群3DGS_fuse_post.ply",
+    "output/楼群3DGS/3DGS/mesh/楼群3DGS_fuse_simplified.ply",
+    "output/真拍 楼群 高斯/3DGS/mesh/真拍 楼群 高斯_fuse.ply",
+    "output/真拍 楼群 高斯/3DGS/mesh/真拍 楼群 高斯_fuse_post.ply",
+    "output/真拍 楼群 高斯/3DGS/mesh/真拍 楼群 高斯_fuse_simplified.ply",
+    "output/街景1_3DGS/3DGS/mesh/街景1_3DGS_fuse.ply",
+    "output/街景1_3DGS/3DGS/mesh/街景1_3DGS_fuse_post.ply",
+    "output/街景1_3DGS/3DGS/mesh/街景1_3DGS_fuse_simplified.ply",
+    "output/车3DGS/3DGS/mesh/车3DGS_fuse.ply",
+    "output/车3DGS/3DGS/mesh/车3DGS_fuse_post.ply",
+    "output/车3DGS/3DGS/mesh/车3DGS_fuse_simplified.ply",
+    "output/高手/3DGS/mesh/高手_fuse.ply",
+    "output/高手/3DGS/mesh/高手_fuse_post.ply",
+    "output/高手/3DGS/mesh/高手_fuse_simplified.ply",
+    "output/高手 2 GS/3DGS/mesh/高手 2 GS_fuse.ply",
+    "output/高手 2 GS/3DGS/mesh/高手 2 GS_fuse_post.ply",
+    "output/高手 2 GS/3DGS/mesh/高手 2 GS_fuse_simplified.ply",
+    "output/高手 3GS/3DGS/mesh/高手 3GS_fuse.ply",
+    "output/高手 3GS/3DGS/mesh/高手 3GS_fuse_post.ply",
+    "output/高手 3GS/3DGS/mesh/高手 3GS_fuse_simplified.ply"
+  ]
+}
