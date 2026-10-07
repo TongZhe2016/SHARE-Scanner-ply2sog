@@ -2,6 +2,12 @@
   "policy": "highest-epoch-per-directory",
   "scenes": [
     {
+      "path": "output/家/3DGS/ply/家_epoch_30.ply",
+      "epoch": 30,
+      "gaussians": 9069245,
+      "bytes": 507878143
+    },
+    {
       "path": "output/桥 高斯/3DGS/ply/桥 高斯_epoch_30.ply",
       "epoch": 30,
       "gaussians": 20585095,
@@ -35,7 +41,7 @@
       "path": "output/高手/3DGS/ply/高手_epoch_30.ply",
       "epoch": 30,
       "gaussians": 15397269,
-      "bytes": 598736896
+      "bytes": 862247488
     },
     {
       "path": "output/高手 2 GS/3DGS/ply/高手 2 GS_epoch_30.ply",
@@ -50,8 +56,11 @@
       "bytes": 1367323640
     }
   ],
-  "candidates": 40,
+  "candidates": 45,
   "skippedMeshPly": [
+    "output/家/3DGS/mesh/家_fuse.ply",
+    "output/家/3DGS/mesh/家_fuse_post.ply",
+    "output/家/3DGS/mesh/家_fuse_simplified.ply",
     "output/桥 高斯/3DGS/mesh/桥 高斯_fuse.ply",
     "output/桥 高斯/3DGS/mesh/桥 高斯_fuse_post.ply",
     "output/桥 高斯/3DGS/mesh/桥 高斯_fuse_simplified.ply",

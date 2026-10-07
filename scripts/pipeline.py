@@ -69,6 +69,9 @@ def discover(base=ROOT / 'output', all_epochs=False):
     selected = []
     for items in groups.values():
         selected.extend(items if all_epochs else [max(items, key=lambda x: (x['epoch'], x['path']))])
+    stems = [Path(i['path']).stem for i in selected]
+    if len(stems) != len(set(stems)):
+        raise ValueError('Duplicate scene filenames would collide in sog/; rename inputs or separate runs')
     return dict(policy='all-epochs' if all_epochs else 'highest-epoch-per-directory',
                 scenes=selected, candidates=sum(map(len, groups.values())), skippedMeshPly=skipped)
 
@@ -177,6 +180,10 @@ def main():
         write_json(ROOT/'reports/inventory.json', inventory)
         print(json.dumps(inventory, ensure_ascii=False, indent=2)); return
     if not items: p.error('No Gaussian scenes found')
+    version = subprocess.check_output([str(NODE), str(CLI), '--version'], text=True).strip()
+    commit = subprocess.check_output(['git', '-C', str(ROOT/'vendor/splat-transform'), 'rev-parse', 'HEAD'], text=True).strip()
+    if '3.10.0' not in version or commit[:7] not in version:
+        raise ValueError('Encoder package and submodule revision differ')
     # Prevent concurrent writers using the same output directory.
     import fcntl
     with (ROOT/'sog/.pipeline.lock').open('w') as lock:
