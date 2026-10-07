@@ -3,13 +3,15 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "description": "Reproducible PlayCanvas PLY to SOG scene compression",
+  "description": "Convert 3D Gaussian PLY files to SOG",
   "scripts": {
-    "inventory": "python3 scripts/pipeline.py inventory",
-    "convert": "python3 scripts/pipeline.py convert",
-    "verify": "python3 scripts/pipeline.py verify",
-    "test": "python3 -m unittest discover -s tests -v"
+    "convert": "node scripts/convert.mjs",
+    "test": "node --test tests/*.test.mjs"
   },
-  "dependencies": {"@playcanvas/splat-transform": "3.10.0"},
-  "devDependencies": {"node": "22.22.0"}
+  "dependencies": {
+    "@playcanvas/splat-transform": "3.10.0"
+  },
+  "devDependencies": {
+    "node": "22.22.0"
+  }
 }

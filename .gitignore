@@ -1,13 +1,5 @@
 node_modules/
-.venv/
-__pycache__/
-*.pyc
-*.log
-*.tmp
-# Scene assets live outside this repository. Protect against accidental copies.
+data/
 *.ply
 *.sog
 .DS_Store
-
-data/
-reports/
