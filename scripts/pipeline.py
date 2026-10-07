@@ -6,6 +6,7 @@ import io
 import json
 import os
 from pathlib import Path
+from datetime import datetime, timezone, timedelta
 import re
 import subprocess
 import tempfile
@@ -73,7 +74,11 @@ def discover(base=ROOT / 'output', all_epochs=False):
     if len(stems) != len(set(stems)):
         raise ValueError('Duplicate scene filenames would collide in sog/; rename inputs or separate runs')
     return dict(policy='all-epochs' if all_epochs else 'highest-epoch-per-directory',
-                scenes=selected, candidates=sum(map(len, groups.values())), skippedMeshPly=skipped)
+                scenes=selected, candidates=sum(map(len, groups.values())), skippedMeshPly=skipped,
+                scannedAt=datetime.now(timezone(timedelta(hours=8))).isoformat(),
+                captureDirectoriesWithoutGaussianPly=[p.name for p in sorted(ROOT.iterdir())
+                    if p.is_dir() and any(p.glob('*.bag'))
+                    and not any(Path(i['path']).parts[1] == p.name for i in selected)])
 
 
 def validate_source(path):

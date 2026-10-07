@@ -20,6 +20,19 @@ def make_ply(path, count=1024):
 
 
 class PipelineTests(unittest.TestCase):
+    def test_inventory_latest_all_epochs_and_mesh_exclusion(self):
+        with tempfile.TemporaryDirectory(dir=pipeline.ROOT/'sog') as tmp:
+            base = Path(tmp)
+            scene = base/'带 空格 场景'/'ply'; scene.mkdir(parents=True)
+            make_ply(scene/'场景_epoch_9.ply')
+            make_ply(scene/'场景_epoch_30.ply')
+            (scene/'mesh.ply').write_text('ply\nformat ascii 1.0\nelement vertex 0\nproperty float x\nend_header\n')
+            latest = pipeline.discover(base)
+            self.assertEqual(latest['scenes'][0]['epoch'], 30)
+            self.assertEqual(latest['candidates'], 2)
+            self.assertEqual(len(latest['skippedMeshPly']), 1)
+            self.assertEqual(len(pipeline.discover(base, all_epochs=True)['scenes']), 2)
+
     def test_truncated_source_rejected(self):
         with tempfile.TemporaryDirectory() as tmp:
             p = Path(tmp)/'test.ply'; make_ply(p)
