@@ -24,7 +24,10 @@
   ],
   "originalFilesPreserved": true,
   "visualRenderingCompared": false,
-  "gitPush": "Pending final push via authenticated GitHub SSH",
+  "gitPush": "Completed: git@github.com:TongZhe2016/SHARE-Scanner-ply2sog.git, branch main",
   "compressionRatio": 5.4407938154852,
-  "bytesSavedPercent": 81.6203290565088
+  "bytesSavedPercent": 81.6203290565088,
+  "codeDirectory": "ply2sog/",
+  "assetRoot": "parent of codeDirectory (or PLY2SOG_DATA_ROOT)",
+  "verification": "All 9 outputs passed separate full decode and input/output SHA-256 verification"
 }
