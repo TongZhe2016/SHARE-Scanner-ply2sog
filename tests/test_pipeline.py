@@ -1,4 +1,7 @@
 import importlib.util
+import os
+import subprocess
+import json
 from pathlib import Path
 import tempfile
 import unittest
@@ -44,6 +47,24 @@ class PipelineTests(unittest.TestCase):
             self.assertEqual(latest['candidates'], 2)
             self.assertEqual(len(latest['skippedMeshPly']), 1)
             self.assertEqual(len(pipeline.discover(base, all_epochs=True)['scenes']), 2)
+
+    def test_cli_with_configured_data_root(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            source = root/'output'/'scene-a'/'scene-a_epoch_30.ply'
+            source.parent.mkdir(parents=True)
+            make_ply(source)
+            env = dict(os.environ, PLY2SOG_DATA_ROOT=str(root))
+            for action in ['inventory', 'convert', 'verify']:
+                subprocess.run(['python3', str(pipeline.PROJECT_ROOT/'scripts/pipeline.py'),
+                                action, '--gpu', 'cpu'], env=env, check=True, capture_output=True, text=True)
+            reports = root/'sog'/'reports'
+            inventory = json.loads((reports/'inventory.json').read_text())
+            self.assertEqual(len(inventory['scenes']), 1)
+            record = json.loads((reports/'scene-a_epoch_30.json').read_text())
+            self.assertEqual(record['source'], 'output/scene-a/scene-a_epoch_30.ply')
+            self.assertEqual(record['output'], 'sog/scene-a_epoch_30.sog')
+            self.assertEqual(record['validation']['verifiedGaussians'], 1024)
 
     def test_truncated_source_rejected(self):
         with tempfile.TemporaryDirectory() as tmp:

@@ -183,7 +183,7 @@ def main():
         items = [i for i in items if Path(i['path']).stem in args.scene]
         if len(items) != len(set(args.scene)): p.error('Scene not found; see inventory')
     if args.action == 'inventory':
-        write_json(PROJECT_ROOT/'reports/inventory.json', inventory)
+        write_json(DATA_ROOT/'sog/reports/inventory.json', inventory)
         print(json.dumps(inventory, ensure_ascii=False, indent=2)); return
     if not items: p.error('No Gaussian scenes found')
     version = subprocess.check_output([str(NODE), str(CLI), '--version'], text=True, stderr=subprocess.STDOUT).strip()
@@ -205,7 +205,7 @@ def main():
                     raise ValueError(f'Hash mismatch: {target}')
                 verify_sog(target, item['gaussians'])
                 print(f'VERIFIED {target.name}', flush=True)
-            write_json(PROJECT_ROOT/'reports'/ (Path(item['path']).stem + '.json'), result)
+            write_json(DATA_ROOT/'sog/reports'/ (Path(item['path']).stem + '.json'), result)
 
 
 if __name__ == '__main__': main()

@@ -8,3 +8,6 @@ __pycache__/
 *.ply
 *.sog
 .DS_Store
+
+data/
+reports/

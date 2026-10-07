@@ -1,35 +1,28 @@
-# 上海 3DGS：PLY → SOG
+# PLY → SOG：3D 高斯场景转换工具
 
-把扫描训练输出的 3D Gaussian Splatting PLY 转为 PlayCanvas SOG v2 单文件场景。保留所有高斯，不做抽稀、裁剪、去浮点或坐标变换；SOG 属性量化本身是**有损压缩**。
+基于 PlayCanvas SplatTransform，将 3D Gaussian Splatting PLY 转换为 SOG v2 压缩场景。支持批量发现、训练快照选择、断点续跑和完整解码校验。
 
-## 目录
+转换保留高斯数量与坐标系。SOG 使用有损属性量化及无损 WebP 纹理编码，适用于场景存储和分发。
 
-代码仓库独立位于 `/mnt/data1/上海/ply2sog/`；资产根目录为其父目录 `/mnt/data1/上海/`。
+## 支持的输入
+
+批处理流程支持 **SH0、binary_little_endian、14 个 float32 属性**的高斯 PLY：
 
 ```text
-上海/
-├── ply2sog/             # Git 仓库：代码、子模块、依赖、文档、报告
-├── output/              # 原有训练结果，包括输入 PLY
-├── sog/                 # 新导出的完整场景 SOG 与运行日志
-└── 各扫描工程及照片视频    # 原样保留
+x y z
+f_dc_0 f_dc_1 f_dc_2
+opacity
+scale_0 scale_1 scale_2
+rot_0 rot_1 rot_2 rot_3
 ```
 
-以下未加 `../` 的代码路径均相对于 `ply2sog/`：
-
-- 原有照片、视频、扫描工程文件夹以及 `../output/`：原地保留，不加入 Git。
-- `vendor/splat-transform/`：唯一 Git 子模块，官方 SplatTransform 源码。
-- `scripts/`：场景发现、批量编码、验证。
-- `tests/`：端到端测试和损坏输入测试。
-- `../sog/`：完整场景 `.sog`、同名 `.json` 校验记录、`.log` 编码日志；大文件不入 Git。
-- `reports/`：纳入版本管理的源场景清单和逐场景校验记录。
-- `docs/`：算法、完整性及验证说明。
+输入必须包含完整的高斯属性，数值有限且旋转四元数非零。普通网格会在发现阶段跳过；其他属性布局会在编码前报告错误。
 
 ## 安装
 
-需要 Linux、Git、npm 和 Python 3。项目锁定 Node 22.22.0；不修改系统 Node。首次 `npm ci` 若系统 Node 较旧，可能显示 engine 警告，实际执行使用项目内 Node 22。
+环境要求：Linux、Git、npm、Python 3。执行以下命令时，工作目录为项目根目录。
 
 ```bash
-cd /mnt/data1/上海/ply2sog
 git submodule update --init --recursive
 npm ci
 python3 -m venv .venv
@@ -37,61 +30,74 @@ python3 -m venv .venv
 pip install -r scripts/requirements.txt
 ```
 
-SplatTransform npm 包固定 `3.10.0`，对应子模块提交 `b57ea7b4e7aebab9d0aabf7545db89ad1b292823`。运行官方预编译包；子模块保留对应源码供审计和修改。无需编译 Engine，也无需单独的 Engine 子模块。npm 会自动安装工具自身需要的 `playcanvas` 库依赖。
+项目使用固定版本的 Node 22.22.0 和 SplatTransform 3.10.0。批处理自动调用项目依赖中的 Node；使用较旧的系统 Node 安装依赖时，npm 可能显示 engine 提示。
 
-## 运行
+`vendor/splat-transform/` 固定到提交 `b57ea7b4e7aebab9d0aabf7545db89ad1b292823`。编码执行对应版本的官方 npm 发布包，并在运行前核对源码提交与编码器版本。
 
-```bash
-npm run inventory  # 扫描 output/ 下高斯 PLY，排除网格
-npm test           # 生成小场景，实际编码、解码、验证续跑和篡改拒绝
-npm run convert    # 每个目录选择最大 epoch；默认 GPU 0
-npm run verify     # 重算源/目标 SHA-256，完整解码每个场景
+## 数据目录
+
+通过 `PLY2SOG_DATA_ROOT` 指定数据根目录。例如，在项目根目录创建 `data/`，按以下结构组织输入：
+
+```text
+data/
+├── output/
+│   ├── scene-a/
+│   │   ├── scene-a_epoch_10.ply
+│   │   └── scene-a_epoch_30.ply
+│   └── scene-b/
+│       └── scene-b.ply
+└── sog/
+    ├── scene-a_epoch_30.sog
+    ├── scene-a_epoch_30.json
+    ├── scene-a_epoch_30.log
+    └── reports/
 ```
 
-单场景、CPU 回退、全部训练快照：
+```bash
+export PLY2SOG_DATA_ROOT="$PWD/data"
+```
+
+输入从数据根目录的 `output/` 递归发现；成品写入同级 `sog/`。未设置环境变量时，数据根目录默认为项目根目录的父目录。
+
+每个输入目录代表一个场景。默认选择 `_epoch_<数字>` 最大的文件；未带 epoch 的文件按 epoch 0 处理，同 epoch 时按路径排序取最后一个。因此，独立场景应放在不同目录中。输出文件名沿用输入名称，同名冲突会报告错误。
+
+## 使用
 
 ```bash
-npm run convert -- --scene '楼群3DGS_epoch_30'
+npm run inventory  # 生成输入清单
+npm run convert    # 批量转换每个场景的最新快照
+npm run verify     # 检查源/目标哈希并完整解码
+npm test           # 运行隔离的端到端测试
+```
+
+选择单个场景、使用 CPU 或处理所有训练快照：
+
+```bash
+npm run convert -- --scene scene-a_epoch_30
 npm run convert -- --gpu cpu
 npm run convert -- --all-epochs
 npm run verify -- --all-epochs
+```
+
+默认设备索引为 `0`。可用设备通过官方 CLI 查询：
+
+```bash
 node_modules/node/bin/node node_modules/@playcanvas/splat-transform/bin/cli.mjs --list-gpus
 ```
 
-默认每场景取最新训练快照，epoch 10/15/20/25 是同一场景的中间版本。`--all-epochs` 才会额外压缩全部中间版本。当前自动验证适配已发现的 **SH0、binary_little_endian、14 个 float 属性** PLY；其他格式会明确拒绝，避免静默损失属性。仅有照片或工程数据、没有高斯 PLY 的目录无法直接进行这一步压缩。
+## 输出与验证
 
-## 输出与续跑
+每个 `.sog` 配套同名 JSON 校验记录及编码日志。记录包含源/目标 SHA-256、文件大小、高斯数量、压缩比、耗时、编码器版本和解码统计。运行清单及逐场景报告存放在数据根目录的 `sog/reports/`，记录中的文件路径均相对于数据根目录。
 
-默认使用代码仓库的父目录作为资产根目录。仓库放在其他位置时，设置环境变量即可，无需搬动素材：
+转换先写临时目录，校验成功后发布成品。重复运行会核对源/目标哈希并完整解码已有结果，然后跳过编码。缺少配套记录或哈希不符时会报告错误，保留文件供检查。文件锁保证同一输出目录内的批处理互斥。
 
-```bash
-PLY2SOG_DATA_ROOT='/实际的资产目录' npm run convert
-```
+SOG 是有损格式，完整解码校验用于确认数据可读性和结构完整性。视觉质量可通过代表性视角的渲染对比进一步评估。大型单文件场景的加载仍需要与高斯数量相匹配的内存和显存。
 
-`reports/` 内记录的 `source`、`output` 路径均相对于资产根目录。
+## 项目结构
 
-每个输入 `../output/<场景>/3DGS/ply/<名称>.ply` 输出 `../sog/<名称>.sog`。同名 JSON 记录 SHA-256、字节数、高斯数、耗时和解码统计。
+- `scripts/`：场景发现、编码、解码验证。
+- `tests/`：输入检查、场景选择、端到端转换和续跑测试。
+- `docs/`：压缩算法与校验说明。
+- `vendor/splat-transform/`：固定版本的官方源码子模块。
 
-再次运行会检查已有文件的源/目标哈希，并重新完整解码后跳过编码。没有配套记录的旧输出或哈希不符的文件不会被覆盖。转换先写临时目录，校验成功后才发布最终文件；进程异常退出不会把不完整文件当成成功结果。多实例使用文件锁互斥。发生强制断电时，隐藏的 `.encoding-*` 目录可能残留，可人工检查后清理。
-
-单文件场景最多包含数千万个高斯，导入浏览器时仍需要足够显存。已有 `output/**/_lod` 分块结果保持原样，适合另行开展流式加载；本项目交付独立 `.sog` 文件。
-
-## 本次结果（2026-10-07）
-
-已完成 9 个可用场景的 epoch 30：共 156,545,013 个高斯，PLY 合计 8.77 GB，SOG 合计 1.61 GB，约 5.44 倍压缩，减少 81.62%。全部通过独立复验命令的完整解码与源/目标 SHA-256 校验。结果清单见 `reports/run-summary.json`。
-
-“功夫 电线杆”“街景02_3DGS”“街景3 3DGS”“高手 点云2”尚未发现高斯 PLY，未记作转换成功；补充训练输出后再次运行即可发现和转换。其他已有场景会验证后跳过。
-
-## Git 与推送
-
-代码、依赖锁文件、子模块指针和校验报告按阶段提交；原始素材与 SOG 大文件留在本机，**Git Push 不会备份这些大文件**。使用方应另行备份素材和 `sog/`。
-
-本项目远程仓库为 [TongZhe2016/SHARE-Scanner-ply2sog](https://github.com/TongZhe2016/SHARE-Scanner-ply2sog)。本机使用已认证的 SSH 连接推送：
-
-```bash
-git push -u origin main
-```
-
-本次自动化提交使用仓库本地身份 `Codex <codex@localhost>`，不影响全局 Git 配置。
-
-更多细节：[算法与验证](docs/conversion.md)。
+详细说明见[编码与验证](docs/conversion.md)。

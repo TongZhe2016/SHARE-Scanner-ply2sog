@@ -1,44 +1,47 @@
-# 编码与验证说明
+# 编码与验证
 
-## 官方实现
+## 实现与版本
 
-源代码：[playcanvas/splat-transform](https://github.com/playcanvas/splat-transform)，MIT 许可证见子模块 `LICENSE`。
+编码器使用 [PlayCanvas SplatTransform](https://github.com/playcanvas/splat-transform) 3.10.0，对应提交 `b57ea7b4e7aebab9d0aabf7545db89ad1b292823`。其 MIT 许可证位于子模块 `LICENSE`。
 
-固定版本 3.10.0 / b57ea7b4e7aebab9d0aabf7545db89ad1b292823。编码调用 npm 发布包内同一提交的 CLI；子模块源码完整保留，未修改上游算法。
+主要源码：
 
-相关代码：
-
-- `vendor/splat-transform/src/lib/writers/write-sog.ts`：收集高斯属性、Morton 排序、纹理编码、打包。
+- `vendor/splat-transform/src/lib/writers/write-sog.ts`：属性收集、Morton 排序、纹理编码与打包。
 - `vendor/splat-transform/src/lib/spatial/quantize-1d*`：尺度与颜色码本量化。
-- `vendor/splat-transform/src/lib/readers/read-sog.ts` 和 `read-sog-v2.ts`：官方读取/解码。
+- `vendor/splat-transform/src/lib/readers/read-sog.ts`、`read-sog-v2.ts`：SOG 读取与解码。
 - `vendor/splat-transform/src/lib/utils/webp-codec.ts`：WebP 编解码。
 
-SOG v2 将坐标经过有符号对数变换后编码到高低字节纹理，旋转采用最小三分量编码，尺度和 DC 颜色采用码本，透明度量化到 8 位。纹理经 lossless WebP 编码后，与 meta.json 打包成 ZIP 容器 `.sog`。WebP 是无损的，之前的属性量化仍然有损。Morton 排序改变记录顺序，不改变高斯数量。
+## 压缩流程
 
-这些场景没有高阶球谐函数（SH0）。因此不涉及高阶 SH 的 GPU k-means；即便选择 GPU 0，当前主要工作仍在 CPU/WebP worker 完成。默认四个 worker，逐场景处理，避免多个数千万高斯场景同时占用内存。
+SOG v2 对坐标进行有符号对数变换，量化后写入高低字节纹理；旋转采用最小三分量编码；尺度和 DC 颜色通过码本量化；透明度量化为 8 位。纹理经无损 WebP 编码后，与 `meta.json` 打包为 `.sog` ZIP 容器。
 
-## 数据完整性
+属性量化是有损的。Morton 排序改变记录顺序，高斯数量与坐标系保持一致。
 
-1. 扫描 PLY 头，确认有位置、颜色、透明度、尺度和旋转属性；普通网格 PLY 被排除。
-2. 默认从每个输入目录选择 epoch 最大的 PLY，清单保存到 `reports/inventory.json`。
-3. 编码前验证字节长度、正数高斯数量、全部属性有限值、旋转非零。
-4. 记录整个输入文件的 SHA-256，编码后再次重算，确认输入未变。
-5. 临时结果通过全部验证后才改名发布；源目录不移动、不覆盖、不清理。
-6. 输出大小、SHA-256、高斯数、源码提交、编码器版本与验证结果写入报告。
+批处理验证支持 SH0 高斯 PLY。这类输入主要由 CPU 和 WebP worker 处理。默认使用四个 worker，逐场景执行以控制内存占用。
 
-## 验证覆盖
+## 完整性检查
 
-- Python zipfile 读取所有成员并验证 CRC。
-- meta.json 的格式版本、高斯数量、码本长度与有限性。
-- Pillow 独立解码全部 WebP，验证纹理尺寸一致且容量足够，以及四元数模式合法。
-- 官方 SplatTransform `readFile` + `computeStats` 读取所有高斯，检查 NaN 和无穷值，保存逐属性统计。
-- 透明度量化为 0/1 时，官方解码到 logit 空间可产生负/正无穷；这属于合法的透明/不透明端点，单独允许。
-- 再次执行会比对输入输出 SHA-256，并完整复验已有结果。
+1. 扫描 PLY 头，识别位置、颜色、透明度、尺度和旋转属性。
+2. 按选择策略生成清单，写入数据根目录的 `sog/reports/inventory.json`。
+3. 检查输入长度、高斯数量、全部属性有限性和非零旋转。
+4. 编码前后计算输入文件 SHA-256，确认源数据保持一致。
+5. 验证临时 SOG，通过后发布成品及同名 JSON 记录。
+6. 将文件大小、哈希、数量、耗时、版本和解码统计写入运行报告。
 
-这证明容器和纹理可读、高斯数量不变、属性可解码；不等价于视觉无损或每个视角的渲染一致。本次不将未执行的人工视觉验收或 PSNR 测量记作通过。
+源文件保持原样。已有成品仅在哈希与完整解码校验通过后复用。进程异常退出时，隐藏的 `.encoding-*` 临时目录可能残留，可检查后清理。
 
-## 测试
+## SOG 校验
 
-`npm test` 使用固定随机种子生成 1024 个高斯，测试实际 PLY→SOG→完整解码、源哈希保持、续跑、不符计数拒绝、目标篡改拒绝、截断输入拒绝和 NaN 输入拒绝。
+- 使用 Python `zipfile` 检查所有归档成员的 CRC。
+- 检查格式版本、高斯数量、码本长度及有限值。
+- 使用 Pillow 解码全部 WebP，检查纹理尺寸、容量及四元数编码模式。
+- 使用官方 `readFile` 和 `computeStats` 解码所有高斯，保存逐属性统计，检查 NaN 与无穷值。
+- 透明度量化为 0 或 1 时，官方解码器在 logit 空间产生的负或正无穷是合法端点，校验时单独允许。
 
-项目不会修改子模块代码，因而上游 lint/build 不作为本项目代码的检查方式；版本对应关系在批处理前检查。大型真实场景的逐一报告位于 `reports/`。
+这些检查覆盖容器、纹理、数量及属性的可解码性。视觉质量评估需要额外的渲染对比。
+
+## 测试与复现
+
+`npm test` 在隔离的数据目录中生成固定随机种子的高斯场景，覆盖中文及带空格路径、最新 epoch 选择、网格排除、PLY→SOG 完整转换、解码、源哈希保持、续跑、数量不符、目标篡改、截断输入和 NaN 输入。
+
+依赖版本由 `package-lock.json` 固定，官方源码由子模块提交固定。批处理在运行前核对编码器版本与子模块提交。数据根目录通过 `PLY2SOG_DATA_ROOT` 配置，运行记录与转换结果一同保存。
